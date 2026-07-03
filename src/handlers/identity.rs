@@ -538,17 +538,21 @@ pub async fn token(
             .await?;
 
             let twofactors: Vec<TwoFactor> = list_user_twofactors(&db, &user.id).await?;
-            let mut twofactor_ids: Vec<i32> = twofactors.iter().filter(|tf| tf.enabled && (tf.atype == TwoFactorType::Authenticator as i32 || tf.atype == TwoFactorType::YubiKey as i32)).map(|tf| tf.atype).collect();
+            // [Added]: Include Duo in the list of optional 2FA providers.
+            let mut twofactor_ids: Vec<i32> = twofactors.iter().filter(|tf| tf.enabled && (tf.atype == TwoFactorType::Authenticator as i32 || tf.atype == TwoFactorType::YubiKey as i32 || tf.atype == TwoFactorType::Duo as i32)).map(|tf| tf.atype).collect();
             if twofactor_ids.is_empty() {
                 twofactor_ids.push(TwoFactorType::Authenticator as i32);
             }
             let mut should_issue_remember = false;
 
             if is_twofactor_enabled(&twofactors) {
+                let twofactor_error =
+                    json_err_twofactor_for_login(env.as_ref(), &user, &device, &twofactor_ids)?;
                 let selected_id = payload.two_factor_provider.unwrap_or(twofactor_ids[0]);
-                let twofactor_code = payload.two_factor_token.as_deref().ok_or_else(|| {
-                    AppError::TwoFactorRequired(json_err_twofactor(&twofactor_ids))
-                })?;
+                let twofactor_code = payload
+                    .two_factor_token
+                    .as_deref()
+                    .ok_or_else(|| AppError::TwoFactorRequired(twofactor_error.clone()))?;
 
                 match TwoFactorType::from_i32(selected_id) {
                     Some(TwoFactorType::Authenticator) => {
@@ -604,6 +608,26 @@ pub async fn token(
 
                         crate::yubico::verify_yubico_otp(&env, yubikey_code).await?;
                     
+                        should_issue_remember = payload.two_factor_remember == Some(1);
+                    }
+                    // [Added]: Duo verification logic
+                    Some(TwoFactorType::Duo) => {
+                        let _tf = twofactors
+                            .iter()
+                            .find(|tf| tf.enabled && tf.atype == TwoFactorType::Duo as i32)
+                            .ok_or_else(|| AppError::BadRequest("Duo is not configured".to_string()))?;
+
+                        let is_valid = crate::duo::verify_auth_response(
+                            env.as_ref(),
+                            &user,
+                            &device,
+                            twofactor_code,
+                        )
+                        .await?;
+                        if !is_valid {
+                            return Err(AppError::BadRequest("Invalid Duo response".to_string()));
+                        }
+
                         should_issue_remember = payload.two_factor_remember == Some(1);
                     }
                     Some(TwoFactorType::Remember) => {
@@ -777,4 +801,22 @@ fn json_err_twofactor(providers: &[i32]) -> Value {
     }
 
     result
+}
+
+fn json_err_twofactor_for_login(
+    env: &Env,
+    user: &User,
+    device: &Device,
+    providers: &[i32],
+) -> Result<Value, AppError> {
+    let mut result = json_err_twofactor(providers);
+    if providers.contains(&(TwoFactorType::Duo as i32)) {
+        let auth_url = crate::duo::generate_auth_url(env, user, device)?;
+        let duo_key = (TwoFactorType::Duo as i32).to_string();
+        result["TwoFactorProviders2"][duo_key] = serde_json::json!({
+            "AuthUrl": auth_url,
+            "Object": "twoFactorDuo"
+        });
+    }
+    Ok(result)
 }

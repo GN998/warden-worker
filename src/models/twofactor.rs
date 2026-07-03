@@ -133,3 +133,16 @@ pub struct EnableYubikeyData {
     pub key5: Option<String>,
     pub master_password_hash: Option<String>,
 }
+
+/// POST /api/two-factor/duo - Enable Duo
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnableDuoData {
+    pub host: Option<String>,
+    pub secret_key: Option<String>,
+    pub integration_key: Option<String>,
+    pub master_password_hash: Option<String>,
+
+    #[serde(default, alias = "sig_response")]
+    pub sig_response: Option<String>,
+}

@@ -187,7 +187,7 @@ pub fn generate_totp_secret() -> Result<String, AppError> {
 }
 
 /// Computes HMAC-SHA1 using Web Crypto API.
-async fn hmac_sha1(key: &[u8], data: &[u8]) -> Result<Vec<u8>, AppError> {
+pub async fn hmac_sha1(key: &[u8], data: &[u8]) -> Result<Vec<u8>, AppError> {
     let subtle = subtle_crypto()?;
 
     // Create algorithm object for HMAC with SHA-1
