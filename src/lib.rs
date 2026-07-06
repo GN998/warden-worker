@@ -17,7 +17,6 @@ mod models;
 mod notifications;
 mod push;
 mod router;
-mod yubico;
 
 /// Base URL extracted from the incoming request, used for config endpoint.
 #[derive(Clone)]
