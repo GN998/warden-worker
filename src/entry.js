@@ -112,8 +112,6 @@ const HEAVY_DO_ROUTE_METHODS = new Map([
   ["/api/two-factor/yubikey", new Set(["POST", "PUT", "DELETE"])],
   ["/api/two-factor/disable", new Set(["POST", "PUT"])],
   ["/api/two-factor/get-recover", new Set(["POST"])],
-  ["/api/two-factor/get-duo", new Set(["POST"])],
-  ["/api/two-factor/duo", new Set(["POST", "PUT", "DELETE"])],
 ]);
 
 function shouldOffloadToHeavyDo(request, url) {

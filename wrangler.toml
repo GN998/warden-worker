@@ -45,12 +45,7 @@ directory = "./public/web-vault"
 not_found_handling = "404-page"
 html_handling = "auto-trailing-slash"
 # Only invoke Worker for API and Identity routes, serve static files directly for other routes
-run_worker_first = [
-  "/api/*",
-  "/identity/*",
-  "/notifications/*",
-  "/duo-redirect.html*"
-]
+run_worker_first = ["/api/*", "/identity/*", "/notifications/*"]
 
 [vars]
 # Base URL for the worker, used for generating up/down URLs for files.

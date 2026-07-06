@@ -15,7 +15,6 @@ pub fn api_router(env: Env) -> Router {
 
     Router::new()
         // Identity/Auth routes
-        .route("/duo-redirect.html", get(twofactor::duo_redirect_page))
         .route("/identity/accounts/prelogin", post(accounts::prelogin))
         .route(
             "/identity/accounts/prelogin/password",
@@ -270,17 +269,5 @@ pub fn api_router(env: Env) -> Router {
             put(twofactor::disable_twofactor_put),
         )
         .route("/api/two-factor/get-recover", post(twofactor::get_recover))
-        .route("/api/two-factor/get-duo", post(twofactor::get_duo))
-        .route(
-            "/api/two-factor/duo",
-            post(twofactor::activate_duo)
-                .put(twofactor::activate_duo_put)
-                .delete(twofactor::disable_duo),
-        )
-        .route(
-            "/api/two-factor/duo/delete",
-            post(twofactor::disable_duo)
-                .put(twofactor::disable_duo),
-        )
         .with_state(app_state)
 }
