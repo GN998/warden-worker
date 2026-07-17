@@ -417,7 +417,6 @@ pub async fn create_file_send_legacy(
 
     let mut model_json: Option<String> = None;
     let mut file_bytes: Option<Bytes> = None;
-    let mut content_type: Option<String> = None;
 
     while let Some(field) = multipart
         .next_field()
@@ -434,7 +433,6 @@ pub async fn create_file_send_legacy(
                 );
             }
             Some("data") | Some("file") => {
-                content_type = field.content_type().map(|s| s.to_string());
                 file_bytes = Some(
                     field
                         .bytes()
@@ -489,7 +487,7 @@ pub async fn create_file_send_legacy(
     send.set_password(payload.password.as_deref()).await?;
 
     let storage_key = format!("sends/{}/{file_id}", send.id);
-    upload_to_storage(&env, &storage_key, content_type, file_bytes.to_vec()).await?;
+    upload_to_storage(&env, &storage_key, file_bytes.to_vec()).await?;
 
     send.insert(&db).await?;
     db::touch_user_updated_at(&db, &claims.sub, &send.updated_at).await?;
@@ -534,7 +532,6 @@ pub async fn upload_file_send_direct(
     }
 
     let mut file_bytes: Option<Bytes> = None;
-    let mut content_type: Option<String> = None;
 
     while let Some(field) = multipart
         .next_field()
@@ -542,7 +539,6 @@ pub async fn upload_file_send_direct(
         .map_err(|_| AppError::BadRequest("Invalid multipart data".into()))?
     {
         if field.name() == Some("data") || field.name() == Some("file") {
-            content_type = field.content_type().map(|s| s.to_string());
             file_bytes = Some(
                 field
                     .bytes()
@@ -567,7 +563,7 @@ pub async fn upload_file_send_direct(
     }
 
     let storage_key = pending.storage_key().ok_or_else(|| AppError::Internal)?;
-    upload_to_storage(&env, &storage_key, content_type, file_bytes.to_vec()).await?;
+    upload_to_storage(&env, &storage_key, file_bytes.to_vec()).await?;
 
     pending.finalize(&db).await?;
     db::touch_user_updated_at(&db, &claims.sub, &pending.updated_at).await?;
